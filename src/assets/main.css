@@ -1,0 +1,72 @@
+:root {
+  --brand: #5B2CC9;
+  --brand-dark: #4A22A8;
+  --brand-deep: #4B21B5;
+  --brand-soft: #EFE9FC;
+  --accent: #F26522;
+
+  --text: #16121F;
+  --text-muted: #6B6479;
+  --text-faint: #A8A2B4;
+
+  --surface: #FFFFFF;
+  --field: #F3F3F6;
+  --field-border: #E8E7EE;
+  --track: #E6E3F0;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+
+  --shell-pad: 24px;
+  --font: 'Cairo', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  min-height: 100dvh;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
