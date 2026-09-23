@@ -5,6 +5,7 @@
  */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import DashboardLayout from '../components/layout/DashboardLayout.vue'
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import DataPager from '../components/ui/DataPager.vue'
 import SearchBox from '../components/ui/SearchBox.vue'
 import StateBlock from '../components/ui/StateBlock.vue'
@@ -13,6 +14,7 @@ import { ApiError } from '../api/http'
 import { byOrderAsc, collectAll } from '../api/collect'
 import { ratingCriteriaService, ratingsService, surveysService } from '../api/services'
 import type { RatingCriterionResponse, SurveyResponse, SurveyUpdate } from '../api/types'
+import { auth } from '../stores/auth'
 import { toast } from '../stores/toast'
 import { useI18n } from '../stores/i18n'
 
@@ -174,6 +176,56 @@ async function save() {
     saving.value = false
   }
 }
+
+/* ---- permanent delete (Admin only) ----
+ * Deleting a survey also deletes its ratings server-side, so the score join
+ * is reloaded alongside the list.
+ */
+
+const deleteTarget = ref<SurveyResponse | null>(null)
+const deleteAllOpen = ref(false)
+const deleting = ref(false)
+
+function toError(cause: unknown): ApiError {
+  return cause instanceof ApiError ? cause : new ApiError({ status: 0, message: t('common.unexpected') })
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value || deleting.value) return
+  deleting.value = true
+
+  try {
+    const { message } = await surveysService.remove(deleteTarget.value.id)
+    toast.success(message ?? t('surveys.deleted'))
+    deleteTarget.value = null
+    await Promise.all([list.load(), loadScores()])
+  } catch (cause) {
+    toast.error(toError(cause).message)
+    deleteTarget.value = null
+  } finally {
+    deleting.value = false
+  }
+}
+
+async function confirmDeleteAll() {
+  if (deleting.value) return
+  deleting.value = true
+
+  try {
+    const { data } = await surveysService.removeAll()
+    toast.success(
+      t('surveys.deletedAll', { surveys: data.deletedSurveys, ratings: data.deletedRatings }),
+    )
+    deleteAllOpen.value = false
+    list.pageNumber.value = 1
+    await Promise.all([list.load(), loadScores()])
+  } catch (cause) {
+    toast.error(toError(cause).message)
+    deleteAllOpen.value = false
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -191,6 +243,15 @@ async function save() {
           @click="list.load(); loadScores()"
         >
           {{ t('common.refresh') }}
+        </button>
+        <button
+          v-if="auth.isAdmin.value"
+          type="button"
+          class="btn btn-danger"
+          :disabled="list.totalCount.value === 0"
+          @click="deleteAllOpen = true"
+        >
+          {{ t('surveys.deleteAll') }}
         </button>
         <button type="button" class="btn btn-primary" @click="openCreate">{{ t('surveys.new') }}</button>
       </div>
@@ -271,6 +332,14 @@ async function save() {
                     </RouterLink>
                     <button type="button" class="btn btn-outline btn-sm" @click="openEdit(s)">
                       {{ t('common.edit') }}
+                    </button>
+                    <button
+                      v-if="auth.isAdmin.value"
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      @click="deleteTarget = s"
+                    >
+                      {{ t('common.delete') }}
                     </button>
                   </div>
                 </td>
@@ -363,6 +432,29 @@ async function save() {
         </div>
       </Transition>
     </Teleport>
+
+    <ConfirmDialog
+      :open="deleteTarget !== null"
+      :title="t('surveys.deleteTitle')"
+      :message="deleteTarget ? t('surveys.confirmDelete', { name: deleteTarget.companyName }) : ''"
+      :confirm-label="t('common.deletePermanently')"
+      tone="danger"
+      :busy="deleting"
+      @confirm="confirmDelete"
+      @cancel="deleteTarget = null"
+    />
+
+    <ConfirmDialog
+      :open="deleteAllOpen"
+      :title="t('surveys.deleteAllTitle')"
+      :message="t('surveys.confirmDeleteAll')"
+      :confirm-label="t('common.deletePermanently')"
+      :confirm-word="t('confirm.deleteWord')"
+      tone="danger"
+      :busy="deleting"
+      @confirm="confirmDeleteAll"
+      @cancel="deleteAllOpen = false"
+    />
   </DashboardLayout>
 </template>
 

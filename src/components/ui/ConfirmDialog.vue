@@ -1,6 +1,9 @@
 <script setup lang="ts">
-/** Modal confirmation. Used for user activate/deactivate — never for deletion. */
-import { computed } from 'vue'
+/**
+ * Modal confirmation. Set `confirmWord` for destructive bulk actions: the
+ * confirm button stays disabled until the user types that exact word.
+ */
+import { computed, ref, watch } from 'vue'
 import { useI18n } from '../../stores/i18n'
 
 const { t } = useI18n()
@@ -14,6 +17,7 @@ const props = withDefaults(
     cancelLabel?: string
     busy?: boolean
     tone?: 'brand' | 'danger'
+    confirmWord?: string
   }>(),
   // Labels are resolved below rather than as prop defaults, which are
   // evaluated once and would not follow a locale change.
@@ -23,7 +27,21 @@ const props = withDefaults(
 const confirmText = computed(() => props.confirmLabel ?? t('confirm.confirm'))
 const cancelText = computed(() => props.cancelLabel ?? t('common.cancel'))
 
+const typed = ref('')
+// Start empty every time the dialog opens.
+watch(() => props.open, (open) => {
+  if (open) typed.value = ''
+})
+
+const canConfirm = computed(
+  () => !props.busy && (!props.confirmWord || typed.value.trim() === props.confirmWord),
+)
+
 const emit = defineEmits<{ confirm: []; cancel: [] }>()
+
+function submit() {
+  if (canConfirm.value) emit('confirm')
+}
 </script>
 
 <template>
@@ -42,13 +60,27 @@ const emit = defineEmits<{ confirm: []; cancel: [] }>()
           <h3 class="title">{{ title }}</h3>
           <p class="msg">{{ message }}</p>
 
+          <form v-if="confirmWord" class="word" novalidate @submit.prevent="submit">
+            <label class="word-label" for="confirm-word">
+              {{ t('confirm.typeWord', { word: confirmWord }) }}
+            </label>
+            <input
+              id="confirm-word"
+              v-model="typed"
+              class="form-control"
+              type="text"
+              autocomplete="off"
+              :disabled="busy"
+            />
+          </form>
+
           <div class="actions">
             <button
               type="button"
               class="btn confirm"
               :class="tone"
-              :disabled="busy"
-              @click="emit('confirm')"
+              :disabled="!canConfirm"
+              @click="submit"
             >
               {{ busy ? t('confirm.working') : confirmText }}
             </button>
@@ -94,6 +126,17 @@ const emit = defineEmits<{ confirm: []; cancel: [] }>()
   font-size: 0.87rem;
   line-height: 1.8;
   color: var(--text-muted);
+}
+
+.word {
+  margin: -8px 0 20px;
+}
+
+.word-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .actions {

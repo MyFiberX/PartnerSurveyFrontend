@@ -7,6 +7,7 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import DashboardLayout from '../components/layout/DashboardLayout.vue'
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import DataPager from '../components/ui/DataPager.vue'
 import SearchBox from '../components/ui/SearchBox.vue'
 import StateBlock from '../components/ui/StateBlock.vue'
@@ -14,6 +15,7 @@ import { usePagedList } from '../composables/usePagedList'
 import { ApiError } from '../api/http'
 import { ratingCriteriaService } from '../api/services'
 import type { RatingCriterionResponse } from '../api/types'
+import { auth } from '../stores/auth'
 import { toast } from '../stores/toast'
 import { useI18n } from '../stores/i18n'
 
@@ -85,6 +87,31 @@ async function save() {
       cause instanceof ApiError ? cause : new ApiError({ status: 0, message: t('common.unexpected') })
   } finally {
     saving.value = false
+  }
+}
+
+/* ---- permanent delete (Admin only) ---- */
+
+const deleteTarget = ref<RatingCriterionResponse | null>(null)
+const deleting = ref(false)
+
+async function confirmDelete() {
+  if (!deleteTarget.value || deleting.value) return
+  deleting.value = true
+
+  try {
+    const { message } = await ratingCriteriaService.remove(deleteTarget.value.id)
+    toast.success(message ?? t('criteria.deleted'))
+    deleteTarget.value = null
+    await list.load()
+  } catch (cause) {
+    // "مرتبط بتقييمات" arrives as the server message and is shown verbatim.
+    const err =
+      cause instanceof ApiError ? cause : new ApiError({ status: 0, message: t('common.unexpected') })
+    toast.error(err.message)
+    deleteTarget.value = null
+  } finally {
+    deleting.value = false
   }
 }
 </script>
@@ -166,12 +193,22 @@ async function save() {
                   </span>
                 </td>
                 <td>
-                  <RouterLink
-                    class="btn btn-outline btn-sm"
-                    :to="{ name: 'rating-criterion-details', params: { id: c.id } }"
-                  >
-                    {{ t('common.details') }}
-                  </RouterLink>
+                  <div class="row-actions">
+                    <RouterLink
+                      class="btn btn-outline btn-sm"
+                      :to="{ name: 'rating-criterion-details', params: { id: c.id } }"
+                    >
+                      {{ t('common.details') }}
+                    </RouterLink>
+                    <button
+                      v-if="auth.isAdmin.value"
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      @click="deleteTarget = c"
+                    >
+                      {{ t('common.delete') }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -274,6 +311,17 @@ async function save() {
         </div>
       </Transition>
     </Teleport>
+
+    <ConfirmDialog
+      :open="deleteTarget !== null"
+      :title="t('criteria.deleteTitle')"
+      :message="deleteTarget ? t('criteria.confirmDelete', { name: deleteTarget.labelAr }) : ''"
+      :confirm-label="t('common.deletePermanently')"
+      tone="danger"
+      :busy="deleting"
+      @confirm="confirmDelete"
+      @cancel="deleteTarget = null"
+    />
   </DashboardLayout>
 </template>
 

@@ -8,6 +8,7 @@ import { request } from './http'
 import type {
   AuthResponse,
   ChangePasswordRequest,
+  DeleteAllSurveysResult,
   LoginRequest,
   PagedResult,
   PaginationParams,
@@ -79,6 +80,14 @@ export const usersService = {
       signal,
     })
   },
+
+  /**
+   * DELETE /api/Users/{id} — Admin only. Permanent.
+   * 400 when the user is missing or is the caller's own account.
+   */
+  remove(id: string, signal?: AbortSignal) {
+    return request<null>(`/api/Users/${id}`, { method: 'DELETE', signal })
+  },
 }
 
 /** Controllers\SurveysController.cs */
@@ -114,6 +123,23 @@ export const surveysService = {
       signal,
     })
   },
+
+  /** DELETE /api/Surveys/{id} — Admin only. Permanent; cascades to the survey's ratings. */
+  remove(id: string, signal?: AbortSignal) {
+    return request<null>(`/api/Surveys/${id}`, { method: 'DELETE', signal })
+  },
+
+  /**
+   * DELETE /api/Surveys/all?confirm=true — Admin only. Permanently deletes every
+   * survey and rating; criteria and users are kept. Without confirm=true → 400.
+   */
+  removeAll(signal?: AbortSignal) {
+    return request<DeleteAllSurveysResult>('/api/Surveys/all', {
+      method: 'DELETE',
+      query: { confirm: true },
+      signal,
+    })
+  },
 }
 
 /** Controllers\RatingCriteriaController.cs */
@@ -142,6 +168,14 @@ export const ratingCriteriaService = {
       body: payload,
       signal,
     })
+  },
+
+  /**
+   * DELETE /api/RatingCriteria/{id} — Admin only. Permanent.
+   * 400 when missing or when any rating still references the criterion.
+   */
+  remove(id: string, signal?: AbortSignal) {
+    return request<null>(`/api/RatingCriteria/${id}`, { method: 'DELETE', signal })
   },
 }
 
@@ -181,5 +215,10 @@ export const ratingsService = {
       body: payload,
       signal,
     })
+  },
+
+  /** DELETE /api/Ratings/{id} — Admin only. Permanent. */
+  remove(id: string, signal?: AbortSignal) {
+    return request<null>(`/api/Ratings/${id}`, { method: 'DELETE', signal })
   },
 }

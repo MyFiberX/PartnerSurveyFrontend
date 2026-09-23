@@ -91,6 +91,12 @@ export interface SurveyResponse {
   feedback: string | null
 }
 
+/** `data` of DELETE /api/Surveys/all — both counts are 0 when nothing existed. */
+export interface DeleteAllSurveysResult {
+  deletedSurveys: number
+  deletedRatings: number
+}
+
 /** Entities\DTOs\RatingCriterionDto\RatingCriterionRequest.cs — no DataAnnotations. */
 export interface RatingCriterionRequest {
   labelAr: string

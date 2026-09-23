@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import DashboardLayout from '../components/layout/DashboardLayout.vue'
+import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import StateBlock from '../components/ui/StateBlock.vue'
 import { ApiError } from '../api/http'
 import { byOrderAsc, collectAll } from '../api/collect'
 import { ratingCriteriaService, ratingsService, surveysService } from '../api/services'
 import type { RatingCriterionResponse, RatingResponse, SurveyResponse } from '../api/types'
+import { auth } from '../stores/auth'
+import { toast } from '../stores/toast'
 import { useI18n } from '../stores/i18n'
 
 const { t } = useI18n()
 
 const route = useRoute()
+const router = useRouter()
 
 const survey = ref<SurveyResponse | null>(null)
 const loading = ref(true)
@@ -85,6 +89,7 @@ const scored = computed(() => {
     .filter((c) => byId.has(c.id))
     .map((c) => ({
       id: c.id,
+      ratingId: byId.get(c.id)!.id,
       label: c.labelAr,
       score: byId.get(c.id)!.score,
       scaleMax: Math.max(c.scaleMin, c.scaleMax),
@@ -93,7 +98,13 @@ const scored = computed(() => {
   // A rating whose criterion is missing still shows, rather than vanishing.
   const orphans = ratings.value
     .filter((r) => !criteria.value.some((c) => c.id === r.criterionId))
-    .map((r) => ({ id: r.criterionId, label: t('ratings.deletedCriterion'), score: r.score, scaleMax: null }))
+    .map((r) => ({
+      id: r.criterionId,
+      ratingId: r.id,
+      label: t('ratings.deletedCriterion'),
+      score: r.score,
+      scaleMax: null,
+    }))
 
   return [...known, ...orphans]
 })
@@ -103,6 +114,52 @@ onMounted(async () => {
   await loadRatings()
 })
 onBeforeUnmount(() => controller?.abort())
+
+/* ---- permanent delete (Admin only) ---- */
+
+type ScoredRow = (typeof scored.value)[number]
+
+const surveyDeleteOpen = ref(false)
+const ratingTarget = ref<ScoredRow | null>(null)
+const deleting = ref(false)
+
+function toError(cause: unknown): ApiError {
+  return cause instanceof ApiError ? cause : new ApiError({ status: 0, message: t('common.unexpected') })
+}
+
+async function confirmDeleteSurvey() {
+  if (!survey.value || deleting.value) return
+  deleting.value = true
+
+  try {
+    const { message } = await surveysService.remove(survey.value.id)
+    toast.success(message ?? t('surveys.deleted'))
+    surveyDeleteOpen.value = false
+    await router.push({ name: 'surveys' })
+  } catch (cause) {
+    toast.error(toError(cause).message)
+    surveyDeleteOpen.value = false
+  } finally {
+    deleting.value = false
+  }
+}
+
+async function confirmDeleteRating() {
+  if (!ratingTarget.value || deleting.value) return
+  deleting.value = true
+
+  try {
+    const { message } = await ratingsService.remove(ratingTarget.value.ratingId)
+    toast.success(message ?? t('ratings.deleted'))
+    ratingTarget.value = null
+    await loadRatings()
+  } catch (cause) {
+    toast.error(toError(cause).message)
+    ratingTarget.value = null
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -112,7 +169,17 @@ onBeforeUnmount(() => controller?.abort())
         <h2>{{ t('surveys.detailsTitle') }}</h2>
         <p class="sub">{{ t('common.serverData') }}</p>
       </div>
-      <RouterLink class="btn btn-outline" :to="{ name: 'surveys' }">{{ t('common.back') }}</RouterLink>
+      <div class="head-actions">
+        <button
+          v-if="auth.isAdmin.value && survey && !loading"
+          type="button"
+          class="btn btn-danger"
+          @click="surveyDeleteOpen = true"
+        >
+          {{ t('common.delete') }}
+        </button>
+        <RouterLink class="btn btn-outline" :to="{ name: 'surveys' }">{{ t('common.back') }}</RouterLink>
+      </div>
     </div>
 
     <section class="card card-pad">
@@ -190,14 +257,20 @@ onBeforeUnmount(() => controller?.abort())
               <tr>
                 <th>{{ t('ratings.criterion') }}</th>
                 <th>{{ t('ratings.score') }}</th>
+                <th v-if="auth.isAdmin.value">{{ t('common.actions') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in scored" :key="row.id">
+              <tr v-for="row in scored" :key="row.ratingId">
                 <td>{{ row.label }}</td>
                 <td>
                   <strong>{{ row.score }}</strong>
                   <span v-if="row.scaleMax" class="muted"> / {{ row.scaleMax }}</span>
+                </td>
+                <td v-if="auth.isAdmin.value">
+                  <button type="button" class="btn btn-danger btn-sm" @click="ratingTarget = row">
+                    {{ t('common.delete') }}
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -205,10 +278,37 @@ onBeforeUnmount(() => controller?.abort())
         </div>
       </template>
     </section>
+
+    <ConfirmDialog
+      :open="surveyDeleteOpen"
+      :title="t('surveys.deleteTitle')"
+      :message="survey ? t('surveys.confirmDelete', { name: survey.companyName }) : ''"
+      :confirm-label="t('common.deletePermanently')"
+      tone="danger"
+      :busy="deleting"
+      @confirm="confirmDeleteSurvey"
+      @cancel="surveyDeleteOpen = false"
+    />
+
+    <ConfirmDialog
+      :open="ratingTarget !== null"
+      :title="t('ratings.deleteTitle')"
+      :message="ratingTarget ? t('ratings.confirmDelete', { name: ratingTarget.label }) : ''"
+      :confirm-label="t('common.deletePermanently')"
+      tone="danger"
+      :busy="deleting"
+      @confirm="confirmDeleteRating"
+      @cancel="ratingTarget = null"
+    />
   </DashboardLayout>
 </template>
 
 <style scoped>
+.head-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .feedback {
   white-space: pre-wrap;
   line-height: 1.8;

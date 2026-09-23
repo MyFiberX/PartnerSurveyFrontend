@@ -141,6 +141,19 @@ table.data tbody tr:hover {
   color: var(--brand);
 }
 
+/* Destructive, permanent actions. */
+.btn-danger {
+  background: var(--surface);
+  border-color: #E6B0AA;
+  color: #C0392B;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #C0392B;
+  border-color: #C0392B;
+  color: #fff;
+}
+
 .btn-sm {
   height: 34px;
   min-height: 34px;

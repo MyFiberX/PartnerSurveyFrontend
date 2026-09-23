@@ -90,7 +90,7 @@ export function configureAuth(getToken: () => string | null, unauthorizedHandler
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   query?: Record<string, string | number | boolean | undefined | null>
   /** Anonymous endpoints skip the Authorization header. */

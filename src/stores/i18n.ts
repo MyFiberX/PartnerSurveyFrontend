@@ -185,6 +185,31 @@ const MESSAGES = {
     'search.clear': 'مسح البحث',
     'confirm.confirm': 'تأكيد',
     'confirm.working': 'جارٍ التنفيذ…',
+    'confirm.typeWord': 'اكتب «{word}» للتأكيد:',
+    'confirm.deleteWord': 'حذف',
+
+    'common.delete': 'حذف',
+    'common.deletePermanently': 'حذف نهائي',
+    'surveys.deleteTitle': 'حذف الاستبيان نهائياً',
+    'surveys.confirmDelete':
+      'سيتم حذف استبيان «{name}» مع جميع تقييماته نهائياً، ولا يمكن التراجع عن ذلك.',
+    'surveys.deleted': 'تم حذف الاستبيان نهائياً',
+    'surveys.deleteAll': 'حذف جميع الاستبيانات',
+    'surveys.deleteAllTitle': 'حذف جميع الاستبيانات نهائياً',
+    'surveys.confirmDeleteAll':
+      'سيتم حذف كل الاستبيانات وتقييماتها ولا يمكن استرجاعها. معايير التقييم والمستخدمون لن يُحذفوا.',
+    'surveys.deletedAll': 'تم حذف {surveys} استبيان و {ratings} تقييم',
+    'ratings.deleteTitle': 'حذف التقييم نهائياً',
+    'ratings.confirmDelete': 'سيتم حذف تقييم «{name}» من هذا الاستبيان نهائياً.',
+    'ratings.deleted': 'تم حذف التقييم',
+    'criteria.deleteTitle': 'حذف المعيار نهائياً',
+    'criteria.confirmDelete':
+      'سيتم حذف المعيار «{name}» نهائياً. لا يمكن حذف معيار مرتبط بتقييمات.',
+    'criteria.deleted': 'تم حذف معيار التقييم نهائياً',
+    'users.deleteTitle': 'حذف المستخدم نهائياً',
+    'users.confirmDelete':
+      'سيتم حذف المستخدم «{name}» نهائياً. لإيقافه مؤقتاً استخدم إلغاء التفعيل بدلاً من ذلك.',
+    'users.deleted': 'تم حذف المستخدم نهائياً',
 
     'survey.title': 'استبيان تقييم الخدمة',
     'survey.headerTitle': 'استبيان تقييم خدمة فايبر اكس',
@@ -394,6 +419,31 @@ const MESSAGES = {
     'search.clear': 'Clear search',
     'confirm.confirm': 'Confirm',
     'confirm.working': 'Working…',
+    'confirm.typeWord': 'Type “{word}” to confirm:',
+    'confirm.deleteWord': 'DELETE',
+
+    'common.delete': 'Delete',
+    'common.deletePermanently': 'Delete permanently',
+    'surveys.deleteTitle': 'Delete survey permanently',
+    'surveys.confirmDelete':
+      'The survey from “{name}” and all of its ratings will be permanently deleted. This cannot be undone.',
+    'surveys.deleted': 'Survey permanently deleted',
+    'surveys.deleteAll': 'Delete all surveys',
+    'surveys.deleteAllTitle': 'Delete all surveys permanently',
+    'surveys.confirmDeleteAll':
+      'Every survey and its ratings will be deleted and cannot be recovered. Rating criteria and users are kept.',
+    'surveys.deletedAll': 'Deleted {surveys} surveys and {ratings} ratings',
+    'ratings.deleteTitle': 'Delete rating permanently',
+    'ratings.confirmDelete': 'The “{name}” rating will be permanently removed from this survey.',
+    'ratings.deleted': 'Rating deleted',
+    'criteria.deleteTitle': 'Delete criterion permanently',
+    'criteria.confirmDelete':
+      '“{name}” will be permanently deleted. A criterion that has ratings cannot be deleted.',
+    'criteria.deleted': 'Rating criterion permanently deleted',
+    'users.deleteTitle': 'Delete user permanently',
+    'users.confirmDelete':
+      '“{name}” will be permanently deleted. To suspend the account instead, deactivate it.',
+    'users.deleted': 'User permanently deleted',
 
     'survey.title': 'Service Evaluation Survey',
     'survey.headerTitle': 'FiberX service evaluation survey',

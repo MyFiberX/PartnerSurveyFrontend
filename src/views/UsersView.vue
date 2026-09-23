@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
- * Users management — Admin only. There is no delete: the API exposes no DELETE
- * endpoint, so deactivation via PUT /api/Users/{id}/active is the only removal
- * mechanism.
+ * Users management — Admin only. Deactivation is the reversible option;
+ * delete is permanent and is not offered on the admin's own row.
  */
 import { computed, onMounted, ref } from 'vue'
 import DashboardLayout from '../components/layout/DashboardLayout.vue'
@@ -69,6 +68,30 @@ async function confirm() {
     target.value = null
   } finally {
     busy.value = false
+  }
+}
+
+/* ---- permanent delete ---- */
+
+const deleteTarget = ref<UserResponse | null>(null)
+const deleting = ref(false)
+
+async function confirmDelete() {
+  if (!deleteTarget.value || deleting.value) return
+  deleting.value = true
+
+  try {
+    const { message } = await usersService.remove(deleteTarget.value.id)
+    toast.success(message ?? t('users.deleted'))
+    deleteTarget.value = null
+    await list.load()
+  } catch (cause) {
+    const err =
+      cause instanceof ApiError ? cause : new ApiError({ status: 0, message: t('common.unexpected') })
+    toast.error(err.message)
+    deleteTarget.value = null
+  } finally {
+    deleting.value = false
   }
 }
 </script>
@@ -156,6 +179,14 @@ async function confirm() {
                     <button type="button" class="btn btn-outline btn-sm" @click="ask(u)">
                       {{ u.isActive ? t('users.deactivateLabel') : t('users.activate') }}
                     </button>
+                    <button
+                      v-if="u.id !== auth.user.value?.id"
+                      type="button"
+                      class="btn btn-danger btn-sm"
+                      @click="deleteTarget = u"
+                    >
+                      {{ t('common.delete') }}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -184,6 +215,17 @@ async function confirm() {
       :busy="busy"
       @confirm="confirm"
       @cancel="target = null"
+    />
+
+    <ConfirmDialog
+      :open="deleteTarget !== null"
+      :title="t('users.deleteTitle')"
+      :message="deleteTarget ? t('users.confirmDelete', { name: deleteTarget.userName }) : ''"
+      :confirm-label="t('common.deletePermanently')"
+      tone="danger"
+      :busy="deleting"
+      @confirm="confirmDelete"
+      @cancel="deleteTarget = null"
     />
   </DashboardLayout>
 </template>
